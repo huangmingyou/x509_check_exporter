@@ -75,8 +75,7 @@ func infoGet(t U, c chan string) {
 	info := hostinfo{Host: t.Name, Port: 443}
 	err := info.getCerts(5 * time.Second)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println(t.Name, "get error")
+		fmt.Println(t.Name,err)
 		c <- ""
 		return
 	} else {
@@ -86,8 +85,8 @@ func infoGet(t U, c chan string) {
 	now := time.Now()
 	subM := info.Certs[0].NotAfter.Sub(now)
 	//fmt.Printf("cert_ttl{dns=\"%s\"}  %d\n",t.Name,int(subM.Hours()/24))
-	st1 := fmt.Sprintf("cert_liveday{dns=\"%s\"}  %d\n", t.Name, int(subM.Hours()/24))
-	//fmt.Println("debug",st1)
+	st1 := fmt.Sprintf("cert_liveday{name=\"%s\",dns=\"%s\"}  %d\n", t.Name, info.Certs[0].DNSNames[0],int(subM.Hours()/24))
+	//fmt.Println("debug",info.Certs[0].DNSNames)
 	c <- st1
 }
 
