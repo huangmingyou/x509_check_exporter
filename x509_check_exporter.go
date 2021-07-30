@@ -8,12 +8,11 @@ huangmingyou@gmail.com
 */
 
 import (
-"bytes"
+	//"bytes"
 	"crypto/tls"
-        "crypto/x509"
+	"crypto/x509"
 	"flag"
 	"fmt"
-"text/template"
 	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -35,7 +34,7 @@ type hostinfo struct {
 }
 
 type U struct {
-	Name    string        `yaml:"name"`
+	Name string `yaml:"name"`
 }
 
 type C struct {
@@ -70,59 +69,24 @@ func ParseFlags() (string, string, error) {
 	}
 	return configPath, mode, nil
 }
-func infoGet2(t U) {
-returnInfo := make([]hostinfo, 0, 1)
-        info := hostinfo{Host: t.Name, Port: 443}
-        err := info.getCerts(5*time.Second)
-               if err == nil {
-                        returnInfo = append(returnInfo, info)
-fmt.Println("add 1")
-                }else{
-		fmt.Println(err)
-fmt.Println("get error")
-}
-
-
-                tt := template.Must(template.New("").Parse(`
-{{- range . -}}
-Host: {{ .Host }}:{{ .Port }}
-Certs:
-    {{ range .Certs -}}
-    Issuer: {{ .Issuer.CommonName }}
-    Subject: {{ .Subject.CommonName }}
-    Not Before: {{ .NotBefore.Format "Jan 2, 2006 3:04 PM" }}
-    Not After: {{ .NotAfter.Format "Jan 2, 2006 3:04 PM" }}
-    DNS names: {{ range .DNSNames }}{{ . }} {{ end }}
-{{ end }}
-{{ end -}}
-        `))
-fmt.Println(t.Name)
-                err = tt.Execute(os.Stdout, &returnInfo)
-fmt.Println("end")
-
-}
 
 func infoGet(t U, c chan string) {
-returnInfo := make([]hostinfo, 0, 1)
-        info := hostinfo{Host: t.Name, Port: 443}
-        err := info.getCerts(5*time.Second)
+	returnInfo := make([]hostinfo, 0, 1)
+	info := hostinfo{Host: t.Name, Port: 443}
+	err := info.getCerts(5 * time.Second)
 	if err != nil {
 		fmt.Println(err)
-	}else{
-                        returnInfo = append(returnInfo, info)
-}
+	c <- "err"
+	return
+	} else {
+		returnInfo = append(returnInfo, info)
+	}
 
-                tt := template.Must(template.New("").Parse(`
-{{- range . -}}
-ssl_ttl{target="{{ .Host }}"}  {{ range .Certs -}}  {{ .NotAfter.Format "20060102"}} {{ end }}
-{{ end -}}
-        `))
-buffer := new(bytes.Buffer)
-                //err = tt.Execute(os.Stdout, &info)
-                err = tt.Execute(buffer, &returnInfo)
-
-st1 := buffer.String()
-c <- st1
+	now := time.Now()
+	subM := info.Certs[0].NotAfter.Sub(now)
+	//fmt.Printf("cert_ttl{dns=\"%s\"}  %d\n",t.Name,int(subM.Hours()/24))
+	st1 := fmt.Sprintf("cert_liveday{dns=\"%s\"}  %d\n", t.Name, int(subM.Hours()/24))
+	c <- st1
 }
 
 func Exporter(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +146,6 @@ func (h *hostinfo) getCerts(timeout time.Duration) error {
 
 	return nil
 }
-
 
 func main() {
 	cfgPath, runmode, err := ParseFlags()
