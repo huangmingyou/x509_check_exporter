@@ -1,2 +1,3 @@
 go run x509_check_exporter.go -mode cli
+echo "按任意键退出......"
 read a
