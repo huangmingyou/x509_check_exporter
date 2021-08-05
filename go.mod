@@ -1,4 +1,4 @@
-module x509_check_exporter
+module github.com/huangmingyou/x509_check_exporter
 
 go 1.16
 
